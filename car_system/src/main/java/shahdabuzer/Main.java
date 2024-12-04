@@ -7,8 +7,8 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
         Dashboard dashboard = new Dashboard(null);
-        String userName = "John Doe"; // Replace this with the actual username input
-        dashboard.showDashboard(primaryStage, userName); // Pass the username here
+        String userName = "John Doe"; 
+        dashboard.showDashboard(primaryStage, userName); 
     }
 
     public static void main(String[] args) {

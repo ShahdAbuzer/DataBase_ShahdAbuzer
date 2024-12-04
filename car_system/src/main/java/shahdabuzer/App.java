@@ -1,10 +1,5 @@
 package shahdabuzer;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import javafx.animation.Interpolator;
-import javafx.animation.TranslateTransition;
 import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -12,48 +7,45 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import javafx.util.Duration;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
-import javafx.scene.media.MediaView;
-import javafx.scene.media.MediaException;
 
-public class App extends Application 
-{
-    public static void main( String[] args )
-    {
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class App extends Application {
+    public static void main(String[] args) {
         launch(args);
     }
 
     @Override
     public void start(Stage primaryStage) {
-        VBox root = new VBox(10);
-        root.setAlignment(Pos.TOP_CENTER);
-        StackPane stackPane = new StackPane();
-        stackPane.getChildren();
+        StackPane root = new StackPane();
+
+        ImageView background = new ImageView(new Image("file:C:/Users/توب نت/Desktop/extra/dataBase/img.png"));
+        background.fitWidthProperty().bind(primaryStage.widthProperty());
+        background.fitHeightProperty().bind(primaryStage.heightProperty());
+        background.setPreserveRatio(false);
 
         Text title = new Text("Car System");
         title.setFont(Font.font("Verdana", FontWeight.BOLD, 50));
-        title.setFill(Color.web("#89A8B2"));
+        title.setFill(Color.WHITE);
 
         Sign sign = new Sign();
         VBox signUpForm = sign.createSignUpForm(primaryStage);
 
-        root.getChildren().addAll(title, signUpForm);
-        stackPane.getChildren().add(root);
+        VBox container = new VBox(20, title, signUpForm);
+        container.setAlignment(Pos.CENTER);
 
-        Scene scene = new Scene(stackPane, 800,600);
+        root.getChildren().addAll(background, container);
+
+        Scene scene = new Scene(root, 800, 600);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Car System");
         primaryStage.setFullScreen(true);
@@ -61,8 +53,7 @@ public class App extends Application
 
         connectToDatabase();
 
-        Button loginButton = (Button) signUpForm.getChildren().get(4); // Directly reference the button
-        loginButton.setOnAction(e -> {
+        signUpForm.getChildren().get(4).setOnMouseClicked(e -> {
             Login login = new Login();
             login.showLoginScreen(primaryStage);
         });
@@ -70,12 +61,11 @@ public class App extends Application
 
     private void connectToDatabase() {
         String url = "jdbc:mysql://localhost:3306/car_shop";
-        String username = "root"; 
-        String password = ""; 
-        try {
-            Connection connection = DriverManager.getConnection(url, username, password);
+        String username = "root";
+        String password = "";
+        try (Connection connection = DriverManager.getConnection(url, username, password)) {
         } catch (SQLException e) {
-            showAlert(AlertType.ERROR, "Cannot connect the database! " + e.getMessage());
+            showAlert(AlertType.ERROR, "Cannot connect to the database! " + e.getMessage());
         }
     }
 
