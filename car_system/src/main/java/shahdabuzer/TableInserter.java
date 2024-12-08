@@ -26,17 +26,19 @@ public class TableInserter {
      * @param tableName 
      * @param values  
      */
-    public void insertIntoTable(String tableName, String values) {
-        String sql = "INSERT INTO " + tableName + " VALUES (" + values + ")";
+    public boolean insertIntoTable(String tableName, String values) {
+        String query = "INSERT INTO " + tableName + " VALUES (" + values + ")";
         try (Connection connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
              Statement statement = connection.createStatement()) {
-
-            statement.executeUpdate(sql);
+            statement.executeUpdate(query);
+            return true;
         } catch (SQLException e) {
-            System.err.println("Error inserting into table: " + e.getMessage());
             e.printStackTrace();
+            return false;
         }
     }
+    
+    
 
     /**
      * Fetches all car IDs from the car table.
@@ -44,7 +46,7 @@ public class TableInserter {
      * @return ResultSet containing all car IDs.
      */
     public ResultSet fetchCarIds() {
-        String sql = "SELECT carID FROM car";
+        String sql = "SELECT CarID FROM cars";
         try (Connection connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
              Statement statement = connection.createStatement()) {
 
@@ -62,7 +64,7 @@ public class TableInserter {
      * @return ResultSet containing all customer IDs.
      */
     public ResultSet fetchCustomerIds() {
-        String sql = "SELECT customerID FROM customer";
+        String sql = "SELECT CustomerID FROM customers";
         try (Connection connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
              Statement statement = connection.createStatement()) {
 
@@ -80,7 +82,7 @@ public class TableInserter {
      * @return ResultSet containing all employee IDs.
      */
     public ResultSet fetchEmployeeIds() {
-        String sql = "SELECT employeeID FROM employee";
+        String sql = "SELECT EmployeeID FROM employees";
         try (Connection connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
              Statement statement = connection.createStatement()) {
 
@@ -101,15 +103,15 @@ public class TableInserter {
      * @param quantity
      */
     public void insertOrder(int carId, int customerId, int employeeId, int quantity) {
-        String fetchPriceSql = "SELECT price FROM car WHERE carID = " + carId;
-        String insertSql = "INSERT INTO order (carID, customerID, employeeID, orderDate, quantity, price) VALUES (?, ?, ?, ?, ?, ?)";
+        String fetchPriceSql = "SELECT Price FROM cars WHERE CarID = " + carId;
+        String insertSql = "INSERT INTO orders (CarID, CustomerID, EmployeeID, OrderDate, Quantity, TotalPrice) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
              Statement statement = connection.createStatement();
              PreparedStatement preparedStatement = connection.prepareStatement(insertSql)) {
 
             ResultSet resultSet = statement.executeQuery(fetchPriceSql);
             if (resultSet.next()) {
-                double price = resultSet.getDouble("price") * quantity;
+                double price = resultSet.getDouble("TotalPrice") * quantity;
                 LocalDate orderDate = LocalDate.now();
 
                 preparedStatement.setInt(1, carId);
