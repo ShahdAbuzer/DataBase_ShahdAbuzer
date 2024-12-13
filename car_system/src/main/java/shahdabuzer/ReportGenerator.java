@@ -93,11 +93,12 @@ public class ReportGenerator {
     
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
-                report.append("Sale ID: ").append(rs.getInt("SaleID")).append("\n");
+                report.append("Sale ID: ").append(rs.getInt("OrderID")).append("\n");
                 report.append("Employee ID: ").append(rs.getInt("EmployeeID")).append("\n");
                 report.append("Customer ID: ").append(rs.getInt("CustomerID")).append("\n");
-                report.append("Sale Date: ").append(rs.getDate("PaymentDate")).append("\n");
-                report.append("Sale Amount: ").append(rs.getDouble("Amount")).append("\n");
+                report.append("Sale Date: ").append(rs.getDate("OrderDate")).append("\n");
+                report.append("Sale Amount: ").append(rs.getDouble("Quantity")).append("\n");
+                report.append("Total Price: ").append(rs.getString("TotalPrice")).append("\n");
                 report.append("-------------------------------\n");
             }
         } catch (SQLException e) {
@@ -107,39 +108,63 @@ public class ReportGenerator {
     
 
     private void generatePaymentsReport(Map<String, String> parameters, StringBuilder report) {
-        String query = "SELECT * FROM payments WHERE 1=1";
-        if (parameters.containsKey("customer_id")) {
-            query += " AND CustomerID = ?";
+        StringBuilder queryBuilder = new StringBuilder(
+            "SELECT p.PaymentID, p.Amount, p.PaymentMethod, " +
+            "c.CustomerID, c.FirstName, c.LastName, c.Email " +
+            "FROM payments p " +
+            "INNER JOIN orders o ON p.OrderID = o.OrderID " +
+            "INNER JOIN customers c ON o.CustomerID = c.CustomerID " +
+            "WHERE 1=1"
+        );
+    
+        if (parameters.containsKey("CustomerID")) {
+            queryBuilder.append(" AND c.CustomerID = ?");
         }
+    
+        String query = queryBuilder.toString();
     
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
              PreparedStatement stmt = connection.prepareStatement(query)) {
     
             int index = 1;
-            if (parameters.containsKey("customer_id")) {
-                stmt.setInt(index++, Integer.parseInt(parameters.get("customer_id")));
+            if (parameters.containsKey("CustomerID")) {
+                stmt.setInt(index++, Integer.parseInt(parameters.get("CustomerID")));
             }
     
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                report.append("Payment ID: ").append(rs.getInt("PaymentID")).append("\n");
-                report.append("Customer ID: ").append(rs.getInt("CustomerID")).append("\n");
-                report.append("Payment Amount: ").append(rs.getDouble("Amount")).append("\n");
-                report.append("Payment Method: ").append(rs.getString("PaymentMethod")).append("\n");
-                report.append("-------------------------------\n");
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.isBeforeFirst()) {
+                    report.append("No payments found for the given parameters.\n");
+                    return;
+                }
+    
+                while (rs.next()) {
+                    report.append("Payment ID: ").append(rs.getInt("PaymentID")).append("\n");
+                    report.append("Customer ID: ").append(rs.getInt("CustomerID")).append("\n");
+                    report.append("Customer Name: ").append(rs.getString("FirstName")).append(" ").append(rs.getString("LastName")).append("\n");
+                    report.append("Customer Email: ").append(rs.getString("Email")).append("\n");
+                    report.append("Payment Amount: ").append(rs.getDouble("Amount")).append("\n");
+                    report.append("Payment Method: ").append(rs.getString("PaymentMethod")).append("\n");
+                    report.append("-------------------------------\n");
+                }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Error generating payments report: " + e.getMessage());
         }
     }
-    
-
     private void generateRevenueReport(Map<String, String> parameters, StringBuilder report) {
-        String query = "SELECT ServiceDescription, SUM(cost) AS revenue FROM services WHERE 1=1";
+        StringBuilder queryBuilder = new StringBuilder(
+            "SELECT ServiceDescription, SUM(Cost) AS Revenue " +
+            "FROM services " +
+            "WHERE 1=1"
+        );
+    
         if (parameters.containsKey("start_date") && parameters.containsKey("end_date")) {
-            query += " AND ServiceDate BETWEEN ? AND ?";
+            queryBuilder.append(" AND ServiceDate BETWEEN ? AND ?");
         }
-        query += " GROUP BY ServiceDescription";
+    
+        queryBuilder.append(" GROUP BY ServiceDescription");
+    
+        String query = queryBuilder.toString();
     
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
              PreparedStatement stmt = connection.prepareStatement(query)) {
@@ -150,35 +175,66 @@ public class ReportGenerator {
                 stmt.setString(index++, parameters.get("end_date"));
             }
     
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                report.append("Service Type: ").append(rs.getString("ServiceDescription")).append("\n");
-                report.append("Revenue: ").append(rs.getDouble("revenue")).append("\n");
-                report.append("-------------------------------\n");
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.isBeforeFirst()) {
+                    report.append("No revenue data found for the given parameters.\n");
+                    return;
+                }
+    
+                while (rs.next()) {
+                    report.append("Service Type: ").append(rs.getString("ServiceDescription")).append("\n");
+                    report.append("Revenue: ").append(rs.getDouble("Revenue")).append("\n");
+                    report.append("-------------------------------\n");
+                }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Error generating revenue report: " + e.getMessage());
         }
     }
     
 
     private void generateFrequencyReport(Map<String, String> parameters, StringBuilder report) {
-        String query = "SELECT CarModel, COUNT(*) AS ServiceCount FROM services WHERE 1=1";
-        query += " GROUP BY CarModel";
+        StringBuilder queryBuilder = new StringBuilder(
+            "SELECT ServiceDescription, COUNT(*) AS ServiceCount " +
+            "FROM services " +
+            "WHERE 1=1"
+        );
+    
+        if (parameters.containsKey("start_date") && parameters.containsKey("end_date")) {
+            queryBuilder.append(" AND ServiceDate BETWEEN ? AND ?");
+        }
+    
+        queryBuilder.append(" GROUP BY ServiceDescription");
+    
+        String query = queryBuilder.toString();
     
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
              PreparedStatement stmt = connection.prepareStatement(query)) {
     
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                report.append("Car Model: ").append(rs.getString("CarModel")).append("\n");
-                report.append("Service Count: ").append(rs.getInt("ServiceCount")).append("\n");
-                report.append("-------------------------------\n");
+            int index = 1;
+            if (parameters.containsKey("start_date") && parameters.containsKey("end_date")) {
+                stmt.setString(index++, parameters.get("start_date"));
+                stmt.setString(index++, parameters.get("end_date"));
+            }
+    
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.isBeforeFirst()) { 
+                    report.append("No services found for the given parameters.\n");
+                    return;
+                }
+    
+                while (rs.next()) {
+                    report.append("Service Description: ").append(rs.getString("ServiceDescription")).append("\n");
+                    report.append("Service Count: ").append(rs.getInt("ServiceCount")).append("\n");
+                    report.append("-------------------------------\n");
+                }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Error generating frequency report: " + e.getMessage());
         }
     }
+    
+    
     
 
     private void generateServiceHistoryReport(Map<String, String> parameters, StringBuilder report) {

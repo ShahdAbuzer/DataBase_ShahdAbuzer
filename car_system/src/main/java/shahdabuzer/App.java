@@ -53,10 +53,7 @@ public class App extends Application {
 
         connectToDatabase();
 
-        signUpForm.getChildren().get(4).setOnMouseClicked(e -> {
-            Login login = new Login();
-            login.showLoginScreen(primaryStage);
-        });
+        
     }
 
     private void connectToDatabase() {
